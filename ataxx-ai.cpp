@@ -827,7 +827,7 @@ void MainFrame::Write(wxCommandEvent& WXUNUSED(event))
 
 bool MyApp::OnInit()
 {
-	frame = new MainFrame(wxT("Ataxx AI"), wxPoint(-1, -1), wxSize(224, 224), wxDEFAULT_FRAME_STYLE & wxRESIZE_BORDER & ~wxMAXIMIZE_BOX);
+	frame = new MainFrame(wxT("Ataxx AI"), wxPoint(-1, -1), wxSize(224, 224), wxDEFAULT_FRAME_STYLE & ~wxRESIZE_BORDER & ~wxMAXIMIZE_BOX);
 	
 	frame->Show();
 	SetTopWindow(frame);
