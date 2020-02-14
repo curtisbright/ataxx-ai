@@ -1,1 +1,13 @@
-This is an AI for the game Ataxx which I wrote in late 2010.  The GUI uses wxWidgets and is very rudimentary; it's currently not ready for the public, but for lack of a better place I'm posting it here.
+      Ataxx AI
+====================
+  by Curtis Bright
+www.curtisbright.com
+====================
+
+This is an implementation of the game Ataxx.  Its main features are:
+
+* Cross-platform GUI using wxWidgets
+* Controllable difficulty of AI
+* Unlimited undo and redo
+* Load and save games as simple text files
+* Edit mode allowing board to be freely modified
