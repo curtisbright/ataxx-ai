@@ -5,21 +5,42 @@
 #include <stdio.h>
 #define max(x,y) (x > y ? x : y)
 
-wxTextCtrl* Depth1Text;
-wxTextCtrl* Depth2Text;
-wxStaticText* ScoreText;
-wxStaticText* TurnText;
-wxButton* AIButton;
-wxButton* EditButton;
-wxButton* WriteButton;
-wxButton* ResetButton;
-wxButton* UndoButton;
-wxButton* RedoButton;
-wxButton* LoadButton;
-wxButton* CheckAIButton;
 wxListCtrl* MoveList;
+wxMenu* gamemenu;
+wxMenu* bluemenu;
+wxMenu* greenmenu;
+wxStatusBar* statusbar;
 int count = 0;
 int maxcount = 0;
+
+// Menu id constants
+enum {
+	ID_NEW_GAME = wxID_HIGHEST+1,
+	ID_AI_MOVE,
+	ID_EDIT_MODE,
+	ID_SAVE_GAME,
+	ID_LOAD_GAME,
+	ID_BLUE_OFF,
+	ID_BLUE_1,
+	ID_BLUE_2,
+	ID_BLUE_3,
+	ID_BLUE_4,
+	ID_BLUE_5,
+	ID_BLUE_6,
+	ID_BLUE_7,
+	ID_BLUE_8,
+	ID_BLUE_9,
+	ID_GREEN_OFF,
+	ID_GREEN_1,
+	ID_GREEN_2,
+	ID_GREEN_3,
+	ID_GREEN_4,
+	ID_GREEN_5,
+	ID_GREEN_6,
+	ID_GREEN_7,
+	ID_GREEN_8,
+	ID_GREEN_9
+};
 
 // Return the number of set bits in board
 int score(longint board)
@@ -142,9 +163,24 @@ int countmoves(longint cells, longint active)
 	return nummoves;
 }
 
+class MainFrame : public wxFrame
+{	
+private:
+	
+	void Reset(wxCommandEvent& event);
+	void SetEdit(wxCommandEvent& event);
+	void Write(wxCommandEvent& event);
+	void Load(wxCommandEvent& event);
+
+public:
+	MainFrame(const wxString& title, const wxPoint& pos, const wxSize& size, long style);
+	void RunAI(wxCommandEvent& event);
+	void Undo();
+	void Redo();
+};
+
 class MainPanel : public wxPanel
 {
-//private:
 public:
 	int selected;
 	longint board;
@@ -156,24 +192,24 @@ public:
 	void RMouseUp(wxMouseEvent& event);
 	void Paint(wxPaintEvent& evt);
 	void DrawBoard(wxDC& dc);
+	void KeyDown(wxKeyEvent& event);
 	
 	int start;
-	//wxFrame* par;
+	MainFrame* par;
 	
-//public:
-	MainPanel(wxFrame* parent);
+	MainPanel(MainFrame* parent);
 };
 
 MainPanel* panel;
 
-MainPanel::MainPanel(wxFrame* parent) : wxPanel(parent, wxID_ANY, wxPoint(0, 0), wxSize(224, 224), wxTAB_TRAVERSAL, _T("panel"))
+MainPanel::MainPanel(MainFrame* parent) : wxPanel(parent, wxID_ANY, wxPoint(0, 0), wxSize(224, 224), wxTAB_TRAVERSAL, _T("panel"))
 {	selected = -1;
 	board = STARTBOARD;
 	active = STARTACTIVE;
 	lastactive = STARTACTIVE;
 	player = 'X';
 	
-	//par = parent;
+	par = parent;
 
 	/*negamax(board, active, DEPTH, -50, 50, &board, &active);
 	board = ~board;
@@ -185,6 +221,14 @@ MainPanel::MainPanel(wxFrame* parent) : wxPanel(parent, wxID_ANY, wxPoint(0, 0),
 	Connect(wxEVT_PAINT, wxPaintEventHandler(MainPanel::Paint));
 	Connect(wxEVT_LEFT_UP, wxMouseEventHandler(MainPanel::LMouseUp));
 	Connect(wxEVT_RIGHT_UP, wxMouseEventHandler(MainPanel::RMouseUp));
+	Connect(wxEVT_CHAR_HOOK, wxKeyEventHandler(MainPanel::KeyDown));
+}
+
+void MainPanel::KeyDown(wxKeyEvent& event)
+{	if(event.GetKeyCode()==WXK_LEFT)
+		par->Undo();
+	else if(event.GetKeyCode()==WXK_RIGHT)
+		par->Redo();
 }
 
 void MainPanel::RMouseUp(wxMouseEvent& event)
@@ -348,6 +392,12 @@ void MainPanel::LMouseUp(wxMouseEvent& event)
 			board = ~board;
 			player = (player=='X' ? 'O' : 'X');*/
 		}
+
+		wxCommandEvent dummy;
+		if(player=='X' && !bluemenu->IsChecked(ID_BLUE_OFF))
+			par->RunAI(dummy);
+		if(player=='O' && !greenmenu->IsChecked(ID_GREEN_OFF))
+			par->RunAI(dummy);
 	}
 	else if((active & mask[7*x+y]) && (board & mask[7*x+y]))
 	{	if(selected==7*x+y)
@@ -406,27 +456,30 @@ void MainPanel::DrawBoard(wxDC& dc)
 		board = ~board;
 
 	char str[12];
-	sprintf(str, "Score: %i", player=='X' ? score(board&active)-score(~board&active) : score(~board&active)-score(board&active));
+	if(score(board&active)-score(~board&active)==0)
+		sprintf(str, "Score: 0");
+	else if((player=='X' ? 1 : -1)*(score(board&active)-score(~board&active))>0)
+		sprintf(str, "Score: B+%i", (player=='X' ? 1 : -1)*(score(board&active)-score(~board&active)));
+	else
+		sprintf(str, "Score: G+%i", (player=='X' ? 1 : -1)*(score(~board&active)-score(board&active)));
 	wxString wxstr = wxString::FromAscii(str);
 
-	//dc.DrawText(wxstr, 0, 224);
-	ScoreText->SetLabel(wxstr);
+	statusbar->SetStatusText(wxstr, 0);
 
-	sprintf(str, "Turn: %s", player=='X' ? "Blue" : "Green");
-	wxstr = wxString::FromAscii(str);
-	TurnText->SetLabel(wxstr);
+	if(active==FULLBOARD)
+	{	sprintf(str, "%s wins", (player=='X' ? 1 : -1)*(score(board&active)-score(~board&active)) > 0 ? "Blue" : "Green");
+		wxstr = wxString::FromAscii(str);
+		statusbar->SetStatusText(wxstr, 1);
+	}
+	else
+	{	sprintf(str, "Turn: %s", player=='X' ? "Blue" : "Green");
+		wxstr = wxString::FromAscii(str);
+		statusbar->SetStatusText(wxstr, 1);
+	}
 }
 
 void MainPanel::Paint(wxPaintEvent& event)
 {	wxPaintDC dc(this);
-
-    /*dc.SetPen(*wxBLACK_PEN);
-
-	int i, j;
-	for(i=0; i<7; i++)
-		for(j=0; j<7; j++)
-			dc.DrawRectangle(32*i, 32*j, 32, 32);
-	*/
 
 	DrawBoard(dc);
 }
@@ -436,29 +489,6 @@ class MyApp : public wxApp
 	wxFrame* frame;
 	//MainPanel* drawPane;
 };
-
-class MainFrame : public wxFrame
-{	
-private:
-	
-	void Reset(wxCommandEvent& event);
-	void RunAI(wxCommandEvent& event);
-	void SetEdit(wxCommandEvent& event);
-	void Write(wxCommandEvent& event);
-	void Resize(wxSizeEvent& event);
-	void Undo(wxCommandEvent& event);
-	void Redo(wxCommandEvent& event);
-	void Load(wxCommandEvent& event);
-	void CheckAI(wxCommandEvent& event);
-
-public:
-	MainFrame(const wxString& title, const wxPoint& pos, const wxSize& size);
-};
-
-void MainFrame::Resize(wxSizeEvent& WXUNUSED(event))
-{	if(this->GetClientSize().GetHeight()>30)
-		MoveList->SetClientSize(200, this->GetClientSize().GetHeight());
-}
 
 void MainFrame::Reset(wxCommandEvent& WXUNUSED(event))
 {	count = 0;
@@ -475,7 +505,7 @@ void doMove(wxString move);
 
 void MainFrame::Load(wxCommandEvent& WXUNUSED(event))
 {	
-	wxFileDialog* OpenDialog = new wxFileDialog(this, _T("Choose a file to open"), wxEmptyString, wxEmptyString, _("Text files (*.txt)|*.txt"), wxFD_OPEN, wxDefaultPosition);
+	wxFileDialog* OpenDialog = new wxFileDialog(this, _T("Choose a game to open"), wxEmptyString, wxEmptyString, _("Text files (*.txt)|*.txt"), wxFD_OPEN, wxDefaultPosition);
  
 	if(OpenDialog->ShowModal()!=wxID_OK)
 	{	OpenDialog->Destroy();
@@ -504,7 +534,6 @@ void MainFrame::Load(wxCommandEvent& WXUNUSED(event))
 	file.Open();
 	OpenDialog->Destroy();
 	
-	//wxMessageBox(file.GetLine(0), _T("About Hello World"), wxOK | wxICON_INFORMATION, this);
 	for(unsigned int i=0; i<file.GetLineCount(); i++)
 	{	wxString wxstr = file.GetLine(i).Trim();
 		if(wxstr.Find(_T("\t"))==wxNOT_FOUND)
@@ -558,7 +587,7 @@ void doMove(wxString move)
 	panel->player = (panel->player=='X' ? 'O' : 'X');
 }
 
-void MainFrame::Undo(wxCommandEvent& WXUNUSED(event))
+void MainFrame::Undo()
 {	if(count==0)
 		return;
 	count--;
@@ -582,7 +611,7 @@ void MainFrame::Undo(wxCommandEvent& WXUNUSED(event))
 	panel->DrawBoard(dc);
 }
 
-void MainFrame::Redo(wxCommandEvent& WXUNUSED(event))
+void MainFrame::Redo()
 {	if(count==maxcount)
 		return;
 	count++;
@@ -606,33 +635,53 @@ void MainFrame::Redo(wxCommandEvent& WXUNUSED(event))
 	panel->DrawBoard(dc);
 }
 
-MainFrame::MainFrame(const wxString& title, const wxPoint& pos, const wxSize& size) : wxFrame(NULL, -1, title, pos, size)
+MainFrame::MainFrame(const wxString& title, const wxPoint& pos, const wxSize& size, long style) : wxFrame(NULL, -1, title, pos, size, style)
 {	panel = new MainPanel(this);
 
-	AIButton = new wxButton(this, wxID_HIGHEST+1, _T("AI Move"), wxPoint(100, 225));
-	Connect(wxID_HIGHEST+1, wxEVT_COMMAND_BUTTON_CLICKED, wxCommandEventHandler(MainFrame::RunAI));
-	EditButton = new wxButton(this, wxID_HIGHEST+2, _T("Edit On"), wxPoint(100, 250));
-	Connect(wxID_HIGHEST+2, wxEVT_COMMAND_BUTTON_CLICKED, wxCommandEventHandler(MainFrame::SetEdit));
-	WriteButton = new wxButton(this, wxID_HIGHEST+3, _T("Write"), wxPoint(100, 275));
-	Connect(wxID_HIGHEST+3, wxEVT_COMMAND_BUTTON_CLICKED, wxCommandEventHandler(MainFrame::Write));
-	ResetButton = new wxButton(this, wxID_HIGHEST+4, _T("Reset"), wxPoint(100, 300));
-	Connect(wxID_HIGHEST+4, wxEVT_COMMAND_BUTTON_CLICKED, wxCommandEventHandler(MainFrame::Reset));
-	UndoButton = new wxButton(this, wxID_HIGHEST+5, _T("Undo"), wxPoint(100, 325));
-	Connect(wxID_HIGHEST+5, wxEVT_COMMAND_BUTTON_CLICKED, wxCommandEventHandler(MainFrame::Undo));
-	RedoButton = new wxButton(this, wxID_HIGHEST+6, _T("Redo"), wxPoint(100, 350));
-	Connect(wxID_HIGHEST+6, wxEVT_COMMAND_BUTTON_CLICKED, wxCommandEventHandler(MainFrame::Redo));
-	LoadButton = new wxButton(this, wxID_HIGHEST+7, _T("Load"), wxPoint(100, 375));
-	Connect(wxID_HIGHEST+7, wxEVT_COMMAND_BUTTON_CLICKED, wxCommandEventHandler(MainFrame::Load));
-	CheckAIButton = new wxButton(this, wxID_HIGHEST+8, _T("Check AI"), wxPoint(100, 400));
-	Connect(wxID_HIGHEST+8, wxEVT_COMMAND_BUTTON_CLICKED, wxCommandEventHandler(MainFrame::CheckAI));
-	ScoreText = new wxStaticText(this, wxID_ANY, _T("Score: 0"), wxPoint(0, 225));
-	TurnText = new wxStaticText(this, wxID_ANY, _T("Turn: Blue"), wxPoint(0, 250));
-	Depth1Text = new wxTextCtrl(this, wxID_ANY, _T("5"), wxPoint(0, 275));
-	Depth2Text = new wxTextCtrl(this, wxID_ANY, _T("5"), wxPoint(0, 300));
+	wxMenuBar* menubar = new wxMenuBar;
+	gamemenu = new wxMenu;
+	gamemenu->Append(ID_NEW_GAME, wxT("&New game"));
+	gamemenu->Append(ID_AI_MOVE, wxT("&AI move"));
+	gamemenu->Append(ID_EDIT_MODE, wxT("&Edit mode"), "", wxITEM_CHECK);
+	gamemenu->Append(ID_LOAD_GAME, wxT("&Load game..."));
+	gamemenu->Append(ID_SAVE_GAME, wxT("&Save game..."));
+	bluemenu = new wxMenu;
+	bluemenu->Append(ID_BLUE_OFF, wxT("&Off"), "", wxITEM_RADIO);
+	bluemenu->Append(ID_BLUE_1, wxT("&1"), "", wxITEM_RADIO);
+	bluemenu->Append(ID_BLUE_2, wxT("&2"), "", wxITEM_RADIO);
+	bluemenu->Append(ID_BLUE_3, wxT("&3"), "", wxITEM_RADIO);
+	bluemenu->Append(ID_BLUE_4, wxT("&4"), "", wxITEM_RADIO);
+	bluemenu->Append(ID_BLUE_5, wxT("&5"), "", wxITEM_RADIO);
+	bluemenu->Append(ID_BLUE_6, wxT("&6"), "", wxITEM_RADIO);
+	bluemenu->Append(ID_BLUE_7, wxT("&7"), "", wxITEM_RADIO);
+	bluemenu->Append(ID_BLUE_8, wxT("&8"), "", wxITEM_RADIO);
+	bluemenu->Append(ID_BLUE_9, wxT("&9"), "", wxITEM_RADIO);
+	greenmenu = new wxMenu;
+	greenmenu->Append(ID_GREEN_OFF, wxT("&Off"), "", wxITEM_RADIO);
+	greenmenu->Append(ID_GREEN_1, wxT("&1"), "", wxITEM_RADIO);
+	greenmenu->Append(ID_GREEN_2, wxT("&2"), "", wxITEM_RADIO);
+	greenmenu->Append(ID_GREEN_3, wxT("&3"), "", wxITEM_RADIO);
+	greenmenu->Append(ID_GREEN_4, wxT("&4"), "", wxITEM_RADIO);
+	greenmenu->Append(ID_GREEN_5, wxT("&5"), "", wxITEM_RADIO);
+	greenmenu->Append(ID_GREEN_6, wxT("&6"), "", wxITEM_RADIO);
+	greenmenu->Append(ID_GREEN_7, wxT("&7"), "", wxITEM_RADIO);
+	greenmenu->Append(ID_GREEN_8, wxT("&8"), "", wxITEM_RADIO);
+	greenmenu->Append(ID_GREEN_9, wxT("&9"), "", wxITEM_RADIO);
+	greenmenu->Check(ID_GREEN_5, 1);
+
+	Connect(ID_NEW_GAME, wxEVT_COMMAND_MENU_SELECTED, wxCommandEventHandler(MainFrame::Reset));
+	Connect(ID_AI_MOVE, wxEVT_COMMAND_MENU_SELECTED, wxCommandEventHandler(MainFrame::RunAI));
+	Connect(ID_EDIT_MODE, wxEVT_COMMAND_MENU_SELECTED, wxCommandEventHandler(MainFrame::SetEdit));
+	Connect(ID_SAVE_GAME, wxEVT_COMMAND_MENU_SELECTED, wxCommandEventHandler(MainFrame::Write));
+	Connect(ID_LOAD_GAME, wxEVT_COMMAND_MENU_SELECTED, wxCommandEventHandler(MainFrame::Load));
+
+	menubar->Append(gamemenu, wxT("&Game"));
+	menubar->Append(bluemenu, wxT("&Blue AI"));
+	menubar->Append(greenmenu, wxT("G&reen AI"));
+
+	SetMenuBar(menubar);
 
 	MoveList = new wxListCtrl(this, wxID_ANY, wxPoint(230, 0), wxSize(-1,-1), wxLC_REPORT);
-
-	Connect(wxEVT_SIZE, wxSizeEventHandler(MainFrame::Resize));
       
 	wxListItem col0;
 	col0.SetId(0);
@@ -646,27 +695,29 @@ MainFrame::MainFrame(const wxString& title, const wxPoint& pos, const wxSize& si
 	col1.SetWidth(100);
 	MoveList->InsertColumn(1, col1);
 
-	/*MoveList->InsertItem(0, "1");
-	MoveList->InsertItem(1, "2");
-	MoveList->SetItem(0, 1, "17:00");
-	MoveList->SetItem(1, 1, "18:00");*/
+	int styles[2] = {wxSB_SUNKEN, wxSB_SUNKEN};
+	statusbar = CreateStatusBar(2, wxSB_SUNKEN);
+	SetStatusBarPane(-1);
+	statusbar->SetStatusText(wxT("Score: 0"), 0);
+	statusbar->SetStatusText(wxT("Turn: Blue"), 1);
+	statusbar->SetStatusStyles(2, styles);
 
-	/*wxTextFile file;
-	file.Create("test.txt");
-	file.AddLine("Test\n");
-	file.Write();
-	file.Close();*/
+	SetClientSize(224, 224);
+	panel->SetFocus();
 }
 
-void MainFrame::RunAI(wxCommandEvent& WXUNUSED(event))
-{	//wxMessageBox(_("This is a wxWidgets Hello world sample"), _("About Hello World"), wxOK | wxICON_INFORMATION, this);
-	
+void MainFrame::RunAI(wxCommandEvent& event)
+{	
 	if(panel->active==FULLBOARD)
 		return;
 
-	long depth1, depth2;
-	Depth1Text->GetValue().ToLong(&depth1);
-	Depth2Text->GetValue().ToLong(&depth2);
+	long depth1 = 5, depth2 = 5;
+	for(int i=1; i<10; i++)
+	{	if(bluemenu->IsChecked(ID_BLUE_OFF+i))
+			depth1 = i;
+		if(greenmenu->IsChecked(ID_GREEN_OFF+i))
+			depth2 = i;
+	}
 
 	panel->lastactive = panel->active;
 	negamax(panel->board, panel->active, panel->player=='X' ? depth1 : depth2, -50, 50, &(panel->board), &(panel->active));
@@ -715,33 +766,19 @@ void MainFrame::RunAI(wxCommandEvent& WXUNUSED(event))
 	count++;
 	maxcount = count;
 	free(str);
-	
-	wxClientDC dc(panel);
-	panel->DrawBoard(dc);
-}
 
-void MainFrame::CheckAI(wxCommandEvent& WXUNUSED(event))
-{		
-	if(panel->active==FULLBOARD)
-		return;
+	if(panel->player=='X' && !bluemenu->IsChecked(ID_BLUE_OFF))
+		RunAI(event);
+	if(panel->player=='O' && !greenmenu->IsChecked(ID_GREEN_OFF))
+		RunAI(event);
 
-	long depth1, depth2;
-	Depth1Text->GetValue().ToLong(&depth1);
-	Depth2Text->GetValue().ToLong(&depth2);
-
-	panel->lastactive = panel->active;
-	negamax(panel->board, panel->active, panel->player=='X' ? depth1 : depth2, -50, 50, &(panel->board), &(panel->active));
-	panel->board = ~panel->board;
-	panel->player = (panel->player=='X' ? 'O' : 'X');
-	panel->selected = -1;
-	
 	wxClientDC dc(panel);
 	panel->DrawBoard(dc);
 }
 
 void MainFrame::SetEdit(wxCommandEvent& WXUNUSED(event))
 {	panel->start = (panel->start==0 ? 1 : 0);
-	EditButton->SetLabel(panel->start==0 ? _T("Edit Off") : _T("Edit On"));
+	gamemenu->Check(ID_EDIT_MODE, panel->start==0);
 }
 
 void MainFrame::Write(wxCommandEvent& WXUNUSED(event))
@@ -759,7 +796,14 @@ void MainFrame::Write(wxCommandEvent& WXUNUSED(event))
 		j++;
 	}
 
-	wxTextFile file(now.Format(_T("game%y%m%d-")) + wxString::Format(_T("%d"), j) + _T(".txt"));
+	wxFileDialog* SaveDialog = new wxFileDialog(this, _T("Choose where to save game"), wxEmptyString, now.Format(_T("game%y%m%d-")) + wxString::Format(_T("%d"), j) + _T(".txt"), _("Text files (*.txt)|*.txt"), wxFD_SAVE, wxDefaultPosition);
+ 
+	if(SaveDialog->ShowModal()!=wxID_OK)
+	{	SaveDialog->Destroy();
+		return;
+	}
+
+	wxTextFile file(SaveDialog->GetPath());
 
 	for(int i=0; i<count; i++)
 	{	
@@ -783,7 +827,7 @@ void MainFrame::Write(wxCommandEvent& WXUNUSED(event))
 
 bool MyApp::OnInit()
 {
-	frame = new MainFrame(wxT("Ataxx Explorer"), wxPoint(-1, -1), wxSize(500, 400));
+	frame = new MainFrame(wxT("Ataxx AI"), wxPoint(-1, -1), wxSize(224, 224), wxDEFAULT_FRAME_STYLE & wxRESIZE_BORDER & ~wxMAXIMIZE_BOX);
 	
 	frame->Show();
 	SetTopWindow(frame);
