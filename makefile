@@ -1,4 +1,4 @@
-ataxx-explorer: ataxx-explorer.cpp
-	g++ ataxx-explorer.cpp `wx-config --cppflags` `wx-config --libs` -o ataxx-explorer
+ataxx-ai: ataxx-ai.cpp
+	g++ ataxx-ai.cpp `wx-config --cppflags` `wx-config --libs` -o ataxx-ai
 clean:
-	rm -f ataxx-explorer
+	rm -f ataxx-ai
