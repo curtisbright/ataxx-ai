@@ -1,6 +1,6 @@
-      Ataxx AI
+      Ataxx AI      
 ====================
-  by Curtis Bright
+  by Curtis Bright  
 www.curtisbright.com
 ====================
 
@@ -11,3 +11,5 @@ This is an implementation of the game Ataxx.  Its main features are:
 * Unlimited undo and redo
 * Load and save games as simple text files
 * Edit mode allowing board to be freely modified
+
+There is also a "console" version that uses a textual interface if you don't want to use wxWidgets.
