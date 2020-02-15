@@ -455,7 +455,7 @@ void MainPanel::DrawBoard(wxDC& dc)
 	if(player=='O')
 		board = ~board;
 
-	char str[12];
+	char str[21];
 	if(score(board&active)-score(~board&active)==0)
 		sprintf(str, "Score: 0");
 	else if((player=='X' ? 1 : -1)*(score(board&active)-score(~board&active))>0)
