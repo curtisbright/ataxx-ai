@@ -310,7 +310,7 @@ void MainPanel::LMouseUp(wxMouseEvent& event)
 		return;
 	}
 
-	if(active==FULLBOARD)
+	if(active==FULLBOARD || (board&active)==0 || ((~board)&active)==0)
 		return;
 
 	if(selected>=0 && (~active & mask[7*x+y]) && (mask[selected] & (clonemask[7*x+y] | jumpmask[7*x+y])))
@@ -466,7 +466,7 @@ void MainPanel::DrawBoard(wxDC& dc)
 
 	statusbar->SetStatusText(wxstr, 0);
 
-	if(active==FULLBOARD)
+	if(active==FULLBOARD || (board&active)==0 || ((~board)&active)==0)
 	{	sprintf(str, "%s wins", (player=='X' ? 1 : -1)*(score(board&active)-score(~board&active)) > 0 ? "Blue" : "Green");
 		wxstr = wxString::FromAscii(str);
 		statusbar->SetStatusText(wxstr, 1);
@@ -708,7 +708,7 @@ MainFrame::MainFrame(const wxString& title, const wxPoint& pos, const wxSize& si
 
 void MainFrame::RunAI(wxCommandEvent& event)
 {	
-	if(panel->active==FULLBOARD)
+	if(panel->active==FULLBOARD || (panel->board&panel->active)==0 || ((~panel->board)&panel->active)==0)
 		return;
 
 	long depth1 = 5, depth2 = 5;
@@ -724,10 +724,6 @@ void MainFrame::RunAI(wxCommandEvent& event)
 	panel->board = ~panel->board;
 	panel->player = (panel->player=='X' ? 'O' : 'X');
 	panel->selected = -1;
-
-
-
-
 
 	char* str = (char*)calloc(5, sizeof(char));
 	strmove(panel->active, panel->lastactive, str);
