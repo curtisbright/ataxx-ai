@@ -11,5 +11,6 @@ This is an implementation of the game Ataxx.  Its main features are:
 * Unlimited undo and redo
 * Load and save games as simple text files
 * Edit mode allowing board to be freely modified
+* Free software released under the FreeBSD license
 
 There is also a "console" version that uses a textual interface if you don't want to use wxWidgets.
